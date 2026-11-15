@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.pyo
+.sync_backup/
+_site/
+.DS_Store
+*.log
+.venv/
+venv/

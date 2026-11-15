@@ -1,0 +1,8 @@
+# 每日同步链路所需依赖（feed / sync / 模型回放）
+# 研究报告生成（report.py、report_v2.py）另需 plotly，本链路不加载，故不列入以保持 Actions 轻量。
+akshare>=1.12
+pandas>=2.0
+numpy>=1.24
+scipy>=1.10
+scikit-learn>=1.3
+statsmodels>=0.14
