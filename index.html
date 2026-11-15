@@ -116,6 +116,40 @@ tbody tr:hover{background:#fafbff}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:12.5px}
 .kv .k{color:var(--mut)}.kv .v{font-weight:650;font-variant-numeric:tabular-nums}
 .mini{font-size:11px;color:var(--mut);margin-top:8px;line-height:1.7}
+/* --- 底层资产与调仓信号 --- */
+.tabs{display:flex;flex-wrap:wrap;gap:7px;margin:2px 0 12px}
+.tabs button{font:inherit;font-size:12px;padding:6px 12px;border:1px solid var(--line);background:#fff;
+ color:var(--ink);border-radius:20px;cursor:pointer;transition:.15s;white-space:nowrap}
+.tabs button:hover{border-color:var(--brand)}
+.tabs button.on{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:650}
+.tabs button .w{opacity:.75;font-size:10.5px;margin-left:5px}
+.siggrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.sigcard{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:#fbfcff}
+.sigcard h4{margin:0 0 8px;font-size:13px;color:var(--navy)}
+.sigcard .formula{font-size:11.5px;line-height:1.7;color:#334166;background:#f2f5fa;
+ border-left:3px solid var(--brand);padding:8px 10px;border-radius:0 6px 6px 0;margin-bottom:9px}
+.sigcard ul{margin:6px 0 0;padding-left:18px;font-size:11.5px;line-height:1.85;color:#42536a}
+.pk{color:var(--mut)}.pv{font-weight:650;color:var(--navy)}
+.statebar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.statebar .sp{background:#f7f9fd;border:1px solid var(--line);border-radius:8px;padding:7px 11px;font-size:11.5px}
+.statebar .sp b{color:var(--navy);font-variant-numeric:tabular-nums}
+.statebar .sp.warn{background:#fff6f4;border-color:#f3cdc8;color:#a52a1e}
+.statebar .sp.warn b{color:#a52a1e}
+.statebar .sp.good{background:#eefaf2;border-color:#bfe6cf;color:#0b6b39}
+.statebar .sp.good b{color:#0b6b39}
+.sectbl td.up,.sectbl td.down{font-weight:650}
+.pos .sideL{color:var(--up);font-weight:700}     /* 多头=红 */
+.pos .sideS{color:var(--down);font-weight:700}   /* 空头=绿 */
+.pos .bar{height:9px;border-radius:3px;display:inline-block;vertical-align:middle;min-width:2px}
+.pos .barL{background:var(--up)}.pos .barS{background:var(--down)}
+.covgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:6px;margin-top:6px}
+.covcell{border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:11px;background:#fbfcff}
+.covcell .cn{font-weight:650;color:var(--navy)}.covcell .cs{color:var(--mut);font-size:10px}
+.covcell .dots{margin-top:4px;display:flex;gap:2px}
+.covcell .dots i{width:7px;height:7px;border-radius:2px;background:#e3e8f0}
+.covcell .dots i.use{background:var(--brand)}
+.covlegend{font-size:10.5px;color:var(--mut);margin-top:8px}
+@media(max-width:980px){.siggrid{grid-template-columns:1fr}}
 .corr{display:grid;gap:3px;margin-top:8px;font-size:11px;font-variant-numeric:tabular-nums}
 .corr .cr{display:grid;grid-template-columns:90px repeat(5,1fr);gap:3px;align-items:center}
 .corr .ch{color:var(--mut);text-align:center}.corr .cl{color:var(--mut)}
@@ -142,7 +176,7 @@ code{background:#f2f5fa;border:1px solid #e5eaf2;border-radius:4px;padding:1px 5
   <div class="navlinks" id="navlinks">
     <a href="#overview">绩效概览</a><a href="#equity">净值对比</a><a href="#pit">回撤杠杆</a>
     <a href="#monthly">月度收益</a><a href="#layers">分层贡献</a><a href="#signal">策略池</a>
-    <a href="#validation">稳健性</a><a href="#ops">同步部署</a>
+    <a href="#holdings">资产与信号</a><a href="#validation">稳健性</a><a href="#ops">同步部署</a>
   </div>
   <div class="live" id="live"><i></i><span>接口加载中</span></div>
 </div></nav>
@@ -240,6 +274,56 @@ code{background:#f2f5fa;border:1px solid #e5eaf2;border-radius:4px;padding:1px 5
   </div>
 </section>
 
+<section class="sec" id="holdings">
+  <h2>底层资产与调仓信号 · 打开策略黑盒</h2>
+  <div class="card"><div class="body" id="hdHead"></div></div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>① 资产 × 策略覆盖矩阵（32 个底层品种，谁在交易谁）</h3>
+    <div class="body"><div class="covgrid" id="covGrid"></div>
+      <div class="covlegend" id="covLegend"></div></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>② 逐策略：调仓信号定义 + 当前信号状态</h3>
+    <div class="body">
+      <div class="tabs" id="hdTabs"></div>
+      <div class="siggrid">
+        <div class="sigcard" id="hdSignal"></div>
+        <div class="sigcard" id="hdState"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:14px">
+    <div class="card"><h3>③ 当前底层持仓 <span id="hdPosTitle" style="font-weight:400;color:var(--mut);font-size:12px"></span></h3>
+      <div class="tw"><table class="pos">
+        <thead><tr><th>品种</th><th>板块</th><th>方向</th><th>策略内权重</th><th>组合有效敞口</th><th>60日动量</th><th>ER20</th></tr></thead>
+        <tbody id="hdPos"></tbody></table></div>
+      <div class="body"><div class="note" id="hdPosNote"></div></div></div>
+    <div class="card"><h3>④ 板块净暴露</h3>
+      <div class="chartbox" id="c_sector" style="position:relative;min-height:230px"></div>
+      <div class="body"><div class="note">红=净多、绿=净空；长度对应该板块策略内净权重之和（真实由品种级权重聚合）。</div></div></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>⑤ 信号时序 <span id="hdHistTitle" style="font-weight:400;color:var(--mut);font-size:12px"></span></h3>
+    <div class="chartbox" id="c_hdsig" style="position:relative;min-height:250px"></div>
+    <div class="body"><div class="note">净敞口与多头占比来自逐日权重矩阵；金色虚线为样本外起点。折线变盘/换手抬升处即真实调仓信号触发点。</div></div>
+  </div>
+
+  <div class="grid2" style="margin-top:14px">
+    <div class="card"><h3>⑥ 近期调仓事件</h3>
+      <div class="tw"><table>
+        <thead><tr><th>日期</th><th>换手 |Δw|</th><th>方向翻转</th><th>主要变动品种</th></tr></thead>
+        <tbody id="hdEvents"></tbody></table></div>
+      <div class="body"><div class="note" id="hdEventNote"></div></div></div>
+    <div class="card"><h3>⑦ 全市场信号环境</h3>
+      <div class="chartbox" id="c_hdmarket" style="position:relative;min-height:230px"></div>
+      <div class="body"><div class="note" id="hdMarketNote"></div></div></div>
+  </div>
+</section>
+
 <section class="sec" id="validation">
   <h2>稳健性验证与过拟合诊断</h2>
   <div class="grid2">
@@ -277,13 +361,14 @@ code{background:#f2f5fa;border:1px solid #e5eaf2;border-radius:4px;padding:1px 5
     <div class="body"><div class="note" id="auditNote"></div></div></div>
 </section>
 
-<footer>数据来源：本仓库同源策略数据接口（data/meta.json、nav.json、signal.json、weights.json、strategies.json、validation.json、sync_audit.json）。<br>
+<footer>数据来源：本仓库同源策略数据接口（data/meta.json、nav.json、signal.json、weights.json、strategies.json、holdings.json、validation.json、sync_audit.json）。<br>
+底层资产与调仓信号由 cta_lab 现有策略函数重建的品种级权重矩阵真实计算，与回测同源、每日自动同步。
 策略模型接口 = 32 品种国内期货/指数日线的固定参数回放；页面仅用于策略研究，不构成投资建议。市场有风险，投资需谨慎。</footer>
 </div>
 
 <script>
 "use strict";
-const S={meta:null,nav:null,sig:null,wts:null,strat:null,val:null,audit:null,gran:"day",range:"all"};
+const S={meta:null,nav:null,sig:null,wts:null,strat:null,val:null,audit:null,hold:null,hdCode:null,gran:"day",range:"all"};
 const $=s=>document.querySelector(s),$$=s=>Array.from(document.querySelectorAll(s));
 const get=async p=>{const r=await fetch(p,{cache:"no-store"});if(!r.ok)throw new Error(p+" HTTP "+r.status);return r.json();};
 const nf=(v,d,unit,signed)=>{if(v===null||v===undefined||Number.isNaN(v))return "—";
@@ -607,6 +692,133 @@ function renderSignal(){
   <td>${nf(r.leverage,3)}</td><td><span class="badge ${r.kind==="权重调整"?"on":""}">${esc(r.kind)}</span></td></tr>`).join("")
   ||'<tr><td colspan="5">—</td></tr>';
 }
+/* ---------- 底层资产与调仓信号 ---------- */
+function hdName(c){const p=((S.strat&&S.strat.pool)||[]).find(x=>x.code===c);return p?p.name:c;}
+
+/* 水平双向条形：中心 0，净多向右(红)、净空向左(绿) —— 中国涨红跌绿 */
+function hBar(box,items){
+ const W=Math.max(box.clientWidth||420,300),rowH=32,H=items.length*rowH+30;
+ const cx=W*0.60,half=W*0.28;   // 中心右移，左侧留足板块名与净空数值空间
+ const mx=Math.max(...items.map(x=>Math.abs(x.net)),1e-6);
+ let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img">
+  <line x1="${cx}" y1="8" x2="${cx}" y2="${H-22}" stroke="#9aa8ba" stroke-width="1.2"/>`;
+ items.forEach((it,i)=>{
+  const y=10+i*rowH,len=Math.max(Math.abs(it.net)/mx*half,1);
+  const pos=it.net>=0,col=pos?"#d93025":"#0f9d58";
+  const x=pos?cx:cx-len;
+  // 板块名固定在最左，数值标签放在条形靠中心一侧（不与名称/条形重叠）
+  s+=`<text x="6" y="${y+14}" text-anchor="start" fill="#6b7a8c" font-size="11.5">${esc(it.sector)}</text>`;
+  s+=`<rect x="${x.toFixed(1)}" y="${y+2}" width="${len.toFixed(1)}" height="15" rx="3" fill="${col}" opacity=".85"/>`;
+  const tx=pos?(cx+len+5):(cx-len-5);
+  s+=`<text x="${tx.toFixed(1)}" y="${y+14}" text-anchor="${pos?"start":"end"}" fill="${col}" font-size="11" font-weight="650">${nf(it.net,3,"",true)}</text>`;
+ });
+ s+=`<text x="${(cx-half).toFixed(1)}" y="${H-6}" text-anchor="middle" fill="#0f9d58" font-size="10.5">◀ 净空</text>
+     <text x="${(cx+half).toFixed(1)}" y="${H-6}" text-anchor="middle" fill="#d93025" font-size="10.5">净多 ▶</text></svg>`;
+ box.innerHTML=s;
+}
+
+function renderHoldings(){
+ const h=S.hold,box=$("#hdHead");
+ if(!h){box.innerHTML='<div class="note">holdings.json 接口不可用（模型回放后自动生成）；本节在下次每日同步后可用。</div>';return;}
+ const core=h.core||[],secs=h.universe.sectors||[];
+ if(!S.hdCode||core.indexOf(S.hdCode)<0)
+   S.hdCode=core.indexOf("trend_fast_v2")>=0?"trend_fast_v2":core[0];
+ const mk=h.market||{};
+ /* 概览 */
+ box.innerHTML=`<div class="syncbar" style="margin:0;border:0;box-shadow:none;padding:0">
+   <span class="pill">信号日 <b>${esc(h.as_of)}</b></span>
+   <span class="pill">底层品种 <b>${h.universe.n_assets}</b> 个 / <b>${secs.length}</b> 板块</span>
+   <span class="pill">入池策略 <b>${core.length}</b> 个</span>
+   <span class="pill ${mk.er20_last<0.18?"err":"ok"}">全市场 ER20 <b>${nf(mk.er20_last,3)}</b> · ${esc((mk.er20_last<0.18)?"磨损期":(mk.er20_last>=0.25?"趋势流畅":"中性过渡"))}</span>
+   <span class="pill">60日上涨宽度 <b>${nf(mk.breadth_last*100,1,"%")}</b></span></div>
+   <div class="note">本节把每个子策略的<b>底层资产</b>（交易哪些品种、当前多空方向与权重、板块暴露）与
+   <b>调仓信号</b>（信号公式/参数/触发规则、当前信号读数、真实调仓事件与信号时序）逐层展开。
+   数据由 <code>cta_lab</code> 现有策略函数重建的品种级权重矩阵真实计算，与回测同源、每日自动同步；信号定义为源码如实转述。</div>`;
+ /* ① 覆盖矩阵 */
+ $("#covGrid").innerHTML=(h.coverage||[]).map(c=>{
+  const dots=core.map(k=>`<i class="${c.used_by.indexOf(k)>=0?"use":""}" title="${esc(hdName(k))}"></i>`).join("");
+  return `<div class="covcell"><div class="cn">${esc(c.name)} <span style="color:var(--mut);font-weight:400;font-size:10px">${esc(c.code)}</span></div>
+   <div class="cs">${esc(c.sector)} · ${c.used_by.length}/${core.length} 策略</div><div class="dots">${dots}</div></div>`;
+ }).join("");
+ $("#covLegend").innerHTML=`色块顺序对应入池策略：${core.map((k,i)=>`${i+1}. ${esc(hdName(k))}`).join(" · ")}。
+   <b>蓝点</b>=该策略覆盖此品种（曾持有非零权重），灰点=不涉及。买入持有策略只覆盖单一资产；趋势/截面/宏观层覆盖 27~29 个品种。`;
+ /* ② 策略选择 tabs */
+ $("#hdTabs").innerHTML=core.map(c=>{
+  const st=h.strategies[c]||{};
+  return `<button data-hd="${esc(c)}">${esc(hdName(c))}<span class="w">${nf(st.prior_pct,1,"%")}</span></button>`;
+ }).join("");
+ $$("#hdTabs button").forEach(b=>{b.classList.toggle("on",b.dataset.hd===S.hdCode);
+  b.addEventListener("click",()=>{S.hdCode=b.dataset.hd;renderHoldings();});});
+
+ const cur=h.strategies[S.hdCode]||{},sg=cur.signal||{},st=cur.state||{},
+       cu=cur.current||{},tu=cur.turnover||{};
+ /* 信号定义卡 */
+ const pk=sg.params||{};
+ $("#hdSignal").innerHTML=`<h4>调仓信号定义 · ${esc(hdName(S.hdCode))}</h4>
+   <div class="formula"><b>${esc(sg.family||"—")}</b><br>${esc(sg.formula||"—")}</div>
+   <div class="kv">${Object.entries(pk).map(([k,v])=>`<div class="pk">${esc(k)}</div><div class="pv">${esc(v)}</div>`).join("")}
+    <div class="pk">持仓周期</div><div class="pv">${esc(sg.holding||"—")}</div>
+    <div class="pk">调仓频率</div><div class="pv">${esc(sg.freq||"—")}</div>
+    <div class="pk">单边成本</div><div class="pv">${nf(cur.cost_bps,1," bp")}</div>
+    <div class="pk">组合权重 / 标定杠杆</div><div class="pv">${nf(cur.prior_pct,1,"%")} / ${nf(cur.scale,2,"×")}</div></div>
+   <ul>${(sg.rules||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
+ /* 当前信号状态卡 */
+ $("#hdState").innerHTML=`<h4>当前信号状态 · ${esc(cu.date||"—")}</h4>
+   <div class="statebar">
+    <span class="sp ${st.stance==="净空"?"good":""}">立场 <b>${esc(st.stance||"—")}</b></span>
+    <span class="sp">市场状态 <b>${esc(st.regime||"—")}</b></span>
+    <span class="sp">持仓分布 <b>${esc(st.breadth_positions||"—")}</b></span>
+    <span class="sp">净 / 总敞口 <b>${nf(cu.net,3)} / ${nf(cu.gross,3)}</b></span>
+    ${st.global_exposure_factor!=null?`<span class="sp ${st.global_exposure_factor<0.99?"warn":""}">降敞口系数 <b>${nf(st.global_exposure_factor,3)}</b></span>`:""}
+    <span class="sp">日均换手 <b>${nf(tu.daily_avg,3)}</b></span>
+    <span class="sp">${tu.build_only?"建仓后无调仓信号":`调仓 ${tu.n_events} 次 · 近 ${esc(tu.last_rebalance||"—")}`}</span></div>
+   <ul>${(st.notes||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+   <div class="mini">信号读数：全市场 ER20 = <b>${nf(st.er20_market,3)}</b>（20 日净位移/路径长度），
+     60 日上涨品种占比 = <b>${nf(st.breadth60*100,1,"%")}</b>。读数为行情真实计算，非估计值。</div>`;
+ /* ③ 当前持仓表 */
+ $("#hdPosTitle").textContent=`（${esc(hdName(S.hdCode))} · ${esc(cu.date||"")} · ${(cu.positions||[]).length} 个持仓）`;
+ const ps=cu.positions||[],mxw=Math.max(...ps.map(x=>Math.abs(x.w)),1e-6);
+ $("#hdPos").innerHTML=ps.map(p=>{
+  const L=p.w>0,bw=Math.abs(p.w)/mxw*70;
+  return `<tr><td>${esc(p.name)} <span style="color:var(--mut)">${esc(p.code)}</span></td>
+   <td style="text-align:left">${esc(p.sector)}</td>
+   <td class="${L?"sideL":"sideS"}">${esc(p.side)}</td>
+   <td class="${L?"sideL":"sideS"}"><span class="bar ${L?"barL":"barS"}" style="width:${bw.toFixed(1)}px"></span> ${nf(p.w,4)}</td>
+   <td class="${cls(p.w_eff_pct)}">${nf(p.w_eff_pct,2,"%",true)}</td>
+   <td class="${cls(p.mom60)}">${nf(p.mom60*100,1,"%",true)}</td>
+   <td>${nf(p.er20,3)}</td></tr>`;
+ }).join("")||'<tr><td colspan="7">—</td></tr>';
+ $("#hdPosNote").innerHTML=`w 为<b>策略内归一化权重</b>（总敞口通常 ≤1）；组合有效敞口 = w × 标定杠杆 × 先验权重 × 当前风控杠杆。
+   60 日动量与 ER20 为该品种当前真实信号读数，可用来核对方向与流畅度。红=多头、绿=空头（中国涨红跌绿）。`;
+ /* ④ 板块净暴露 */
+ hBar($("#c_sector"),cu.sector_exposure||[]);
+ /* ⑤ 信号时序 */
+ $("#hdHistTitle").textContent=`（${esc(hdName(S.hdCode))}）`;
+ const hs=cur.history||{};
+ svgChart($("#c_hdsig"),hs.dates||[],[
+   {name:"净敞口",values:(hs.net||[]).map(x=>x==null?NaN:x),color:"#2c5282",width:1.8,area:true},
+   {name:"总敞口",values:(hs.gross||[]).map(x=>x==null?NaN:x),color:"#b8860b",width:1.2,dash:true}],
+   {unit:"",digits:2,height:250,zeroBase:false,ceilingZero:false,vline:S.nav.sample_split_date,
+    rightAxis:{name:"多头占比",values:(hs.long_frac||[]).map(x=>x==null?NaN:x),color:"#d93025",rightDigits:2}});
+ /* ⑥ 调仓事件 */
+ const ev=cur.events||[];
+ $("#hdEvents").innerHTML=ev.slice().reverse().slice(0,10).map(e=>`<tr><td>${esc(e.date)}</td>
+   <td>${nf(e.turnover,3)}</td><td>${e.flips}</td>
+   <td style="text-align:left">${(e.top||[]).map(t=>`${esc(t.name)} <span class="${cls(t.dw)}">${nf(t.dw,3,"",true)}</span>`).join("、")||"—"}</td></tr>`).join("")
+   ||'<tr><td colspan="4">恒定权重策略：仅首日建仓，无调仓信号</td></tr>';
+ $("#hdEventNote").innerHTML=`调仓事件阈值：单日 |Δw| 之和 &gt; 0.15，直接由权重矩阵逐日差分计算（排除首日建仓）。
+   共 <b>${tu.n_events}</b> 次，日均换手 ${nf(tu.daily_avg,3)}（年化约 ${nf(tu.annual_est,1)}），
+   零换手日占比 ${nf(tu.zero_frac*100,1,"%")}。展示最近 10 次。`;
+ /* ⑦ 全市场环境 */
+ svgChart($("#c_hdmarket"),mk.dates||[],[
+   {name:"全市场 ER20 流畅度",values:(mk.er20||[]).map(x=>x==null?NaN:x),color:"#2c5282",width:1.8,area:true}],
+   {unit:"",digits:2,height:230,vline:S.nav.sample_split_date,
+    rightAxis:{name:"60日上涨宽度",values:(mk.breadth||[]).map(x=>x==null?NaN:x),color:"#d93025",rightDigits:2}});
+ $("#hdMarketNote").innerHTML=`ER 流畅度越高越「方向流畅」，趋势策略越容易赚钱；2026 年后 ER 走低对应文章所述「磨损期」。
+   当前 ER20 <b>${nf(mk.er20_last,3)}</b>、60 日上涨宽度 <b>${nf(mk.breadth_last*100,1,"%")}</b>。
+   按周采样，共 ${(mk.dates||[]).length} 点。${esc(mk.note||"")}`;
+}
+
 function renderValidation(){
  const v=S.val,b=v.bootstrap||{},mg=v.ml_gain||{};
  $("#bootBody").innerHTML=Object.keys(b).map(k=>`<tr><td>${esc(k)}</td>
@@ -671,11 +883,11 @@ function renderOps(){
  $("#auditNote").innerHTML=`<strong>回退与幂等策略：</strong>${esc(p.fallback)}；${esc(p.idempotency)}；
   ${esc(p.missing)}；重试上限 ${p.retry_max} 次。审计仅保留最近 60 条。`;
 }
-function renderAll(){renderHeader();renderKPI();renderEquity();renderMonthly();renderLayers();renderSignal();renderValidation();renderOps();}
+function renderAll(){renderHeader();renderKPI();renderEquity();renderMonthly();renderLayers();renderSignal();renderHoldings();renderValidation();renderOps();}
 function setSeg(sel,key,val){$$(sel+" button").forEach(b=>b.classList.toggle("on",b.dataset[key]===val));}
 $$("#gran button").forEach(b=>b.addEventListener("click",()=>{S.gran=b.dataset.g;setSeg("#gran","g",S.gran);renderEquity();}));
 $$("#range button").forEach(b=>b.addEventListener("click",()=>{S.range=b.dataset.r;setSeg("#range","r",S.range);renderEquity();}));
-let rt=null;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{renderEquity();renderLayers();renderSignal();},180);});
+let rt=null;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{renderEquity();renderLayers();renderSignal();renderHoldings();},180);});
 (function navSpy(){
  const links=$$("#navlinks a"),secs=links.map(a=>document.querySelector(a.getAttribute("href"))).filter(Boolean);
  const mark=()=>{let cur=secs[0];
@@ -686,11 +898,12 @@ let rt=null;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout
  window.addEventListener("resize",mark,{passive:true});mark();})();
 (async function boot(){
  try{
-  const [m,n,s,w,st,v,a]=await Promise.all([
+  const [m,n,s,w,st,v,a,hd]=await Promise.all([
    get("./data/meta.json"),get("./data/nav.json"),get("./data/signal.json"),
    get("./data/weights.json"),get("./data/strategies.json"),
-   get("./data/validation.json"),get("./data/sync_audit.json").catch(()=>({runs:[]}))]);
-  S.meta=m;S.nav=n;S.sig=s;S.wts=w;S.strat=st;S.val=v;S.audit=a;
+   get("./data/validation.json"),get("./data/sync_audit.json").catch(()=>({runs:[]})),
+   get("./data/holdings.json").catch(()=>null)]);
+  S.meta=m;S.nav=n;S.sig=s;S.wts=w;S.strat=st;S.val=v;S.audit=a;S.hold=hd;
   renderAll();
  }catch(e){
   $("#live").innerHTML='<i></i><span>接口加载失败</span>';

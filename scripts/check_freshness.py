@@ -21,6 +21,9 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(BASE, 'data')
 META = os.path.join(DATA, 'meta.json')
 TZ = dt.timezone(dt.timedelta(hours=8))
+# 必需接口：缺任一即判定「接口异常」。
+# 注：holdings.json（底层资产与调仓信号）是可选增强接口——feed.py 生成失败不阻塞主链路，
+# 页面 fetch 亦有 catch 降级。故意不列入 REQUIRED，避免一次可选失败被误判为同步停摆。
 REQUIRED = ['meta.json', 'nav.json', 'signal.json', 'weights.json',
             'strategies.json', 'validation.json', 'sync_audit.json', 'rebalances.csv']
 

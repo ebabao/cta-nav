@@ -20,7 +20,7 @@ cta_lab/  （策略模型工程，复用既有脚本，不重写）
                 ▼
 data/  （对外发布的同源接口，静态页直接 fetch）
   meta.json / nav.json / signal.json / weights.json
-  strategies.json / validation.json / sync_audit.json / rebalances.csv
+  strategies.json / holdings.json / validation.json / sync_audit.json / rebalances.csv
                 │
                 │  fetch(..., {cache:"no-store"})
                 ▼
@@ -36,9 +36,10 @@ index.html （静态看板，零外部依赖，页面无需重建即可每日更
 
 | 路径 | 作用 |
 |---|---|
-| `index.html` | 看板静态页（8 章节、原生 SVG 图表、周期/区间切换、导航高亮） |
+| `index.html` | 看板静态页（9 章节、原生 SVG 图表、周期/区间切换、策略切换、导航高亮） |
 | `data/*.json` | 同源策略数据接口（由 `feed.py` 生成） |
 | `scripts/feed.py` | 模型输出 → 接口 的转换器；净值/月度/分年/回撤/风险贡献全部真实计算 |
+| `scripts/holdings.py` | 复用 `cta_lab` 现有策略函数重建品种级权重矩阵 → 底层资产与调仓信号接口（不重写策略、不臆造） |
 | `scripts/sync_daily.py` | 每日同步 7 步编排（抓数/校验/回放/接口/幂等/审计/回退） |
 | `scripts/check_freshness.py` | 停更巡检与一行中文汇报，可下发 `workflow_dispatch` 重启 |
 | `cta_lab/` | 完整策略模型工程（代码 + 行情快照 + 结果快照），保证仓库自包含、可离线回退 |
@@ -49,6 +50,13 @@ index.html （静态看板，零外部依赖，页面无需重建即可每日更
 
 ## 三、数据接口契约
 
+> **底层资产与调仓信号（holdings.json）**：由 `scripts/holdings.py` 复用 `cta_lab` 现有策略函数
+> （`build_all` / `trend_lf_v2` 等，参数与 `run_v2.py` 的 POOL 完全一致）重建「日期 × 品种」权重矩阵 W，
+> 从中真实计算每个子策略的底层资产、当前多空方向与权重、板块净暴露、逐日换手与调仓事件，
+> 并从行情真实计算 ER 流畅度、60 日动量等信号读数。信号定义（公式/参数/触发规则）是对
+> `strategies.py` 源码的如实转述。**不重写策略、不改回测结果、不编造数据**；品种缺失即跳过。
+> `sync_daily.py` 复用 `feed.build()`，故云端每日回放模型后本接口自动同步，无需额外工作流。
+
 | 接口 | 主要内容 |
 |---|---|
 | `meta.json` | 模型/参数指纹/数据指纹、口径说明、数据纯度、目标考核、工程指标、同步状态、回退策略 |
@@ -56,6 +64,7 @@ index.html （静态看板，零外部依赖，页面无需重建即可每日更
 | `signal.json` | 当前生效权重（先验锚定）、当前回撤/敞口、ML 动态权重序列、风控杠杆事件 |
 | `weights.json` | 先验权重 / 风险平价权重 / 真实风险贡献、四大类聚合、进化最优参数、杠杆序列 |
 | `strategies.json` | 8 个入池策略 + 3 个筛除策略绩效、协整检验、样本外相关性、行情流畅度实证 |
+| `holdings.json` | **底层资产与调仓信号**：32 品种元数据与 6 大板块、资产×策略覆盖矩阵、8 个策略各自的信号定义（公式/参数/触发规则）、当前信号状态（ER/宽度/降敞口系数/立场）、当前品种级持仓（方向/权重/组合有效敞口/动量/ER）、板块净暴露、信号时序、真实调仓事件、全市场信号环境 |
 | `validation.json` | Bootstrap 置信区间、参数敏感性、分年子样本、ML 增量诊断、第二层缺口推演 |
 | `sync_audit.json` | 最近 60 次同步审计（run_id / 状态 / 指纹 / 新增 / 重试 / 回退 / 步骤） |
 | `rebalances.csv` | 权重与杠杆显著变动事件明细 |

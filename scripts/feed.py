@@ -556,6 +556,24 @@ def build(sync_info=None):
         },
     }
 
+    # ---------- 底层资产与调仓信号（复用 cta_lab 策略函数重建品种级权重矩阵） ----------
+    # 新增接口独立构建：失败时如实标注状态、不阻塞既有接口、绝不编造数据。
+    holdings_status = {'status': 'unavailable', 'reason': '未执行'}
+    try:
+        import holdings as _holdings
+        hd = _holdings.build(r2, dates,
+                             lever_last=float(lev[-1]) if lev else 1.0)
+        jwrite(os.path.join(DATA, 'holdings.json'), hd)
+        holdings_status = {'status': 'ok', 'as_of': hd['as_of'],
+                           'n_strategies': len(hd['strategies']),
+                           'n_assets': hd['universe']['n_assets']}
+    except Exception as e:
+        holdings_status = {'status': 'error',
+                           'reason': f'{type(e).__name__}: {e}'}
+        print(f'[feed][WARN] holdings 接口生成失败（不影响既有接口）：'
+              f'{type(e).__name__}: {e}', flush=True)
+    meta['holdings'] = holdings_status
+
     jwrite(os.path.join(DATA, 'meta.json'), meta)
     jwrite(os.path.join(DATA, 'nav.json'), nav)
     jwrite(os.path.join(DATA, 'signal.json'), signal)
@@ -563,10 +581,13 @@ def build(sync_info=None):
     jwrite(os.path.join(DATA, 'strategies.json'), strategies)
     jwrite(os.path.join(DATA, 'validation.json'), validation)
 
+    files = ['meta.json', 'nav.json', 'signal.json', 'weights.json',
+             'strategies.json', 'validation.json', 'rebalances.csv']
+    if holdings_status.get('status') == 'ok':
+        files.append('holdings.json')
     return {
         'as_of': dates[-1], 'bars': n, 'params_fp': params_fp, 'data_fp': data_fp,
-        'files': ['meta.json', 'nav.json', 'signal.json', 'weights.json',
-                  'strategies.json', 'validation.json', 'rebalances.csv'],
+        'files': files, 'holdings': holdings_status,
         'n_monthly': len(monthly), 'n_yearly': len(yearly),
         'n_events': len(events), 'n_pool': len(pool),
     }
